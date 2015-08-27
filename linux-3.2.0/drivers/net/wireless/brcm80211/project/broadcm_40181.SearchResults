@@ -1,0 +1,14 @@
+---- 43362 Matches (17 in 2 files) ----
+Dhd_sdio.c (e:\zhengxiaobo\ipm\mainboard\software\wifi\broadcm_40181):#define BCM43362A0_CHIP_REV     0
+Dhd_sdio.c (e:\zhengxiaobo\ipm\mainboard\software\wifi\broadcm_40181):#define BCM43362A2_CHIP_REV     1
+Dhd_sdio.c (e:\zhengxiaobo\ipm\mainboard\software\wifi\broadcm_40181):		/* terence: fix got unlikely tx max for 43362a0*/
+Dhd_sdio.c (e:\zhengxiaobo\ipm\mainboard\software\wifi\broadcm_40181):		if (bus->sih->chip!=BCM43362_CHIP_ID && bus->sih->chiprev!=BCM43362A0_CHIP_REV) {
+Dhd_sdio.c (e:\zhengxiaobo\ipm\mainboard\software\wifi\broadcm_40181):	if (chipid == BCM43362_CHIP_ID)
+Dhd_sdio.c (e:\zhengxiaobo\ipm\mainboard\software\wifi\broadcm_40181):			case BCM43362_CHIP_ID:
+Dhd_sdio.c (e:\zhengxiaobo\ipm\mainboard\software\wifi\broadcm_40181):				if (chiprev==BCM43362A0_CHIP_REV)
+Dhd_sdio.c (e:\zhengxiaobo\ipm\mainboard\software\wifi\broadcm_40181):			                        bus->cl_devid)) { // terence 20120615: fix for 43362 OOB initial
+Hndpmu.c (e:\zhengxiaobo\ipm\mainboard\software\wifi\broadcm_40181):	case SDIOD_DRVSTR_KEY(BCM43362_CHIP_ID, 13):
+Bcmdevs.h (e:\zhengxiaobo\ipm\mainboard\software\wifi\broadcm_40181\include):#define BCM43362_D11N_ID	0x4363		/* 43362 802.11n 2.4GHz device */
+Bcmdevs.h (e:\zhengxiaobo\ipm\mainboard\software\wifi\broadcm_40181\include):#define BCM43362_CHIP_ID	43362		/* 43362 chipcommon chipid */
+Siutils.c (e:\zhengxiaobo\ipm\mainboard\software\wifi\broadcm_40181):	if (CHIPID(sih->chip) == BCM43362_CHIP_ID) {
+Siutils.c (e:\zhengxiaobo\ipm\mainboard\software\wifi\broadcm_40181):	case BCM43362_CHIP_ID:

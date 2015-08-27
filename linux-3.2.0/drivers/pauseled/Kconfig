@@ -1,0 +1,8 @@
+# MIUD configuration
+#
+
+config PAUSELED_DRIVER
+		tristate "pauseled_driver"
+		default y
+		---help---
+		rrmt using touch screen input user interface

@@ -1,0 +1,8 @@
+# MIUD configuration
+#
+
+config LED_DRIVER
+		tristate "led drivers"
+		default y
+		---help---
+		rrmt using touch screen input user interface

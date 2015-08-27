@@ -1,0 +1,8 @@
+# MIUD configuration
+#
+
+config NURSECALL_DRIVER
+		tristate "nursecall_driver"
+		default y
+		---help---
+		rrmt using touch screen input user interface
