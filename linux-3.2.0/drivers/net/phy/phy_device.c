@@ -676,7 +676,6 @@ EXPORT_SYMBOL(genphy_restart_aneg);
 int genphy_config_aneg(struct phy_device *phydev)
 {
 	int result;
-
 	if (AUTONEG_ENABLE != phydev->autoneg)
 		return genphy_setup_forced(phydev);
 
@@ -699,8 +698,9 @@ int genphy_config_aneg(struct phy_device *phydev)
 
 	/* Only restart aneg if we are advertising something different
 	 * than we were before.	 */
-	if (result > 0)
+	if (result > 0) {
 		result = genphy_restart_aneg(phydev);
+    }
 
 	return result;
 }
@@ -803,9 +803,10 @@ int genphy_read_status(struct phy_device *phydev)
 			
 			if (lpa & LPA_100FULL)
 				phydev->duplex = DUPLEX_FULL;
-		} else
+		} else {
 			if (lpa & LPA_10FULL)
 				phydev->duplex = DUPLEX_FULL;
+		}
 
 		if (phydev->duplex == DUPLEX_FULL){
 			phydev->pause = lpa & LPA_PAUSE_CAP ? 1 : 0;

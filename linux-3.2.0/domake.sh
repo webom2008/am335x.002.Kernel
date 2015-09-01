@@ -44,8 +44,8 @@ esac
 
 if [ "$2" = "cp" ]; then
 	echo "coping to ~/tftproot/"
-	cp -f ./arch/arm/boot/uImage /home/qiuweibo/tftproot/
-	ls -l /home/qiuweibo/tftproot/uImage
+	cp -f ./arch/arm/boot/uImage ~/tftproot/
+	ls -l ~/tftproot/uImage
 fi
 
 echo "domake exit success!"

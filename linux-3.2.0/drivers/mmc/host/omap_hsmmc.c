@@ -213,7 +213,6 @@ static int omap_hsmmc_card_detect(struct device *dev, int slot)
 {
 	struct omap_mmc_platform_data *mmc = dev->platform_data;
 
-    printk(">>>>>>>>>>>>>>>>>>>-QWB-omap_hsmmc_card_detect pin=%d\n",mmc->slots[0].switch_pin);
 	/* NOTE: assumes card detect signal is active-low */
 	return !gpio_get_value_cansleep(mmc->slots[0].switch_pin);
 }

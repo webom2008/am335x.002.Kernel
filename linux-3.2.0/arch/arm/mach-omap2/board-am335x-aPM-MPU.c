@@ -480,17 +480,17 @@ static struct pinmux_config mii1_pin_mux[] = {
 
 /* Module pin mux for rmii1 */
 static struct pinmux_config rmii1_pin_mux[] = {
-	{"mii1_crs.rmii1_crs_dv", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
-	{"mii1_rxerr.mii1_rxerr", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
-	{"mii1_txen.mii1_txen", OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
-	{"mii1_txd1.mii1_txd1", OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
-	{"mii1_txd0.mii1_txd0", OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
-	{"mii1_rxd1.mii1_rxd1", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
-	{"mii1_rxd0.mii1_rxd0", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
-	{"rmii1_refclk.rmii1_refclk", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLDOWN},
-	{"mdio_data.mdio_data", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	{"mdio_clk.mdio_clk", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT_PULLUP},
-	{"mii1_col.gpio3_0", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT_PULLUP},
+	{"mii1_crs.rmii1_crs_dv",       OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
+	{"mii1_rxerr.rmii1_rxerr",      OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
+	{"mii1_txen.rmii1_txen",        OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"mii1_txd1.rmii1_txd1",        OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"mii1_txd0.rmii1_txd0",        OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"mii1_rxd1.rmii1_rxd1",        OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
+	{"mii1_rxd0.rmii1_rxd0",        OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
+	{"rmii1_refclk.rmii1_refclk",   OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLDOWN},
+	{"mdio_data.mdio_data",         OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mdio_clk.mdio_clk",           OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT_PULLUP},
+	{"mii1_txd3.gpio0_16",          OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT_PULLUP},
 	{NULL, 0},
 };
 
@@ -950,7 +950,6 @@ struct panel_timing_specifications_data panel_timing_spec_data = {
 #define AM335XEVM_APM_WLAN_IRQ_GPIO GPIO_TO_PIN(0, 19)
 #define AM335XEVM_APM_WLAN_EN_GPIO  GPIO_TO_PIN(1, 24)
 #define AM335XEVM_APM_BT_EN_GPIO  	GPIO_TO_PIN(0, 19)
-#define AM335XEVM_APM_LAN_EN_GPIO  	GPIO_TO_PIN(0, 16)//GPIO_TO_PIN(3, 0)
 #define AM335XEVM_APM_CLKOUT2_GPIO  GPIO_TO_PIN(0, 20)
 
 struct wl12xx_platform_data am335xevm_wlan_data = {
@@ -1157,8 +1156,6 @@ static void mii1_init(int evm_id, int profile)
 static void rmii1_init(int evm_id, int profile)
 {
 	setup_pin_mux(rmii1_pin_mux);
-	gpio_direction_output(AM335XEVM_APM_LAN_EN_GPIO, 1);
-	mdelay(100);
 	return;
 }
 
@@ -2344,8 +2341,9 @@ static void am335x_opp_update(void)
 
 static int beaglebone_phy_fixup(struct phy_device *phydev)
 {
-	phydev->supported &= ~(SUPPORTED_100baseT_Half |
-				SUPPORTED_100baseT_Full);
+    //fixed bugs: 100M disable
+//	phydev->supported &= ~(SUPPORTED_100baseT_Half |
+//				SUPPORTED_100baseT_Full);
 
 	return 0;
 }
