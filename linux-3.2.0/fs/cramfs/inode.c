@@ -23,7 +23,7 @@
 #include <linux/buffer_head.h>
 #include <linux/vfs.h>
 #include <linux/mutex.h>
-
+#include <linux/mtd/mtd.h> //<!--Add by -QWB-20150906-  For fixed cramfs nand flash err block -->
 #include <asm/uaccess.h>
 
 static const struct super_operations cramfs_ops;
@@ -112,6 +112,78 @@ static struct inode *get_cramfs_inode(struct super_block *sb,
 	return inode;
 }
 
+
+//<!-- Add by -QWB-20150906- Begin -->
+//<!-- For fixed cramfs nand flash err block Start -->
+struct cramfs_nand_info {
+    unsigned int erasesize_shift;
+    uint32_t *block_map;
+    uint32_t size;
+};
+
+static unsigned int cramfs_nand_transfer_offset(struct super_block *sb, unsigned int offset)
+{
+    struct cramfs_sb_info *sbi = sb->s_fs_info;
+    struct cramfs_nand_info *nandinfo;
+
+    nandinfo = (struct cramfs_nand_info *)(sbi + 1);
+    
+    if (!nandinfo->erasesize_shift || !nandinfo->block_map)
+        return offset;
+
+    if (offset > nandinfo->size)
+        return offset;
+    
+    return  (offset + nandinfo->block_map[offset >> nandinfo->erasesize_shift]);
+}
+
+static void cramfs_fill_nand(struct super_block *sb)
+{
+    struct cramfs_sb_info *sbi = sb->s_fs_info;
+    struct cramfs_nand_info *nandinfo;
+    uint32_t *block_map = NULL;
+    uint32_t offset = 0;
+    
+    nandinfo = (struct cramfs_nand_info *)(sbi + 1);
+    
+    if(MAJOR(sb->s_dev) == MTD_BLOCK_MAJOR){
+        struct mtd_info *mtd;
+        int blocks, i;
+
+        mtd = get_mtd_device(NULL, MINOR(sb->s_dev));
+        if(!mtd)
+            return;
+
+        if(mtd->type != MTD_NANDFLASH)
+            return;
+
+        blocks = mtd->size>>mtd->erasesize_shift;
+        printk("-QWB-:cramfs_fill_nand blocks is %d-----------------------\n\n\n\n", blocks);
+        block_map = kmalloc(blocks*sizeof(uint32_t), GFP_KERNEL);
+        if (!block_map)
+            return ;
+        
+        for(i = 0; i < blocks; i++){
+            while(mtd->block_isbad(mtd, ((loff_t)i*mtd->erasesize + offset)))
+//            if (mtd->block_isbad(mtd, (loff_t)i*mtd->erasesize))
+                 offset += mtd->erasesize;
+            block_map[i] = offset;
+        }
+        
+        nandinfo->erasesize_shift = mtd->erasesize_shift;
+        nandinfo->block_map = block_map;
+        nandinfo->size = (uint32_t) mtd->size;
+    }
+
+}
+
+//<!-- Add by -QWB-20150906- End -->
+
+
+
+
+
+
 /*
  * We have our own block cache: don't fill up the buffer cache
  * with the rom-image, because the way the filesystem is set
@@ -155,6 +227,9 @@ static void *cramfs_read(struct super_block *sb, unsigned int offset, unsigned i
 
 	if (!len)
 		return NULL;
+
+    offset = cramfs_nand_transfer_offset(sb, offset); //<!--Add by -QWB-20150906-: For fixed cramfs nand flash err block -->
+    
 	blocknr = offset >> PAGE_CACHE_SHIFT;
 	offset &= PAGE_CACHE_SIZE - 1;
 
@@ -222,8 +297,21 @@ static void *cramfs_read(struct super_block *sb, unsigned int offset, unsigned i
 
 static void cramfs_put_super(struct super_block *sb)
 {
+    //<!--Add by -QWB-20150906- START: For fixed cramfs nand flash err block -->
+    struct cramfs_sb_info *sbi = sb->s_fs_info;
+    struct cramfs_nand_info *nandinfo;
+
+    nandinfo = (struct cramfs_nand_info *)(sbi + 1);
+    if (NULL != nandinfo->block_map)
+    {
+    	kfree(nandinfo->block_map);
+    	nandinfo->block_map = NULL;
+    }
+    //<!--Add by -QWB-20150906- END: For fixed cramfs nand flash err block -->
+    
 	kfree(sb->s_fs_info);
 	sb->s_fs_info = NULL;
+
 }
 
 static int cramfs_remount(struct super_block *sb, int *flags, char *data)
@@ -242,10 +330,13 @@ static int cramfs_fill_super(struct super_block *sb, void *data, int silent)
 
 	sb->s_flags |= MS_RDONLY;
 
-	sbi = kzalloc(sizeof(struct cramfs_sb_info), GFP_KERNEL);
+//	sbi = kzalloc(sizeof(struct cramfs_sb_info), GFP_KERNEL); //<!--Delete by -QWB-20150906-: For fixed cramfs nand flash err block -->
+    sbi = kzalloc(sizeof(struct cramfs_sb_info) + sizeof(struct cramfs_nand_info), GFP_KERNEL); //<!--Add by -QWB-20150906-: For fixed cramfs nand flash err block -->
 	if (!sbi)
 		return -ENOMEM;
 	sb->s_fs_info = sbi;
+    
+    cramfs_fill_nand(sb); //<!--Add by -QWB-20150906-: For fixed cramfs nand flash err block -->
 
 	/* Invalidate the read buffers on mount: think disk change.. */
 	mutex_lock(&read_mutex);
