@@ -20,6 +20,7 @@
 #include <linux/vmalloc.h>
 #include <linux/zlib.h>
 #include <linux/cramfs_fs.h>
+#include <linux/watchdog.h>
 
 static z_stream stream;
 static int initialized;
@@ -34,7 +35,7 @@ int cramfs_uncompress_block(void *dst, int dstlen, void *src, int srclen)
 
 	stream.next_out = dst;
 	stream.avail_out = dstlen;
-
+    WATCHDOG_RESET();
 	err = zlib_inflateReset(&stream);
 	if (err != Z_OK) {
 		printk("zlib_inflateReset error %d\n", err);
@@ -55,6 +56,7 @@ err:
 
 int cramfs_uncompress_init(void)
 {
+    WATCHDOG_RESET();
 	if (!initialized++) {
 		stream.workspace = vmalloc(zlib_inflate_workspacesize());
 		if ( !stream.workspace ) {
@@ -70,6 +72,7 @@ int cramfs_uncompress_init(void)
 
 void cramfs_uncompress_exit(void)
 {
+    WATCHDOG_RESET();
 	if (!--initialized) {
 		zlib_inflateEnd(&stream);
 		vfree(stream.workspace);

@@ -39,6 +39,7 @@
 #include <linux/fiemap.h>
 #include <linux/namei.h>
 #include <trace/events/ext3.h>
+#include <linux/watchdog.h>
 #include "xattr.h"
 #include "acl.h"
 
@@ -355,6 +356,7 @@ static int ext3_block_to_path(struct inode *inode,
 	int n = 0;
 	int final = 0;
 
+    WATCHDOG_RESET();
 	if (i_block < 0) {
 		ext3_warning (inode->i_sb, "ext3_block_to_path", "block < 0");
 	} else if (i_block < direct_blocks) {
@@ -419,6 +421,7 @@ static Indirect *ext3_get_branch(struct inode *inode, int depth, int *offsets,
 	Indirect *p = chain;
 	struct buffer_head *bh;
 
+    WATCHDOG_RESET();
 	*err = 0;
 	/* i_data is not going away, no lock needed */
 	add_chain (chain, NULL, EXT3_I(inode)->i_data + *offsets);
@@ -476,6 +479,7 @@ static ext3_fsblk_t ext3_find_near(struct inode *inode, Indirect *ind)
 	ext3_fsblk_t bg_start;
 	ext3_grpblk_t colour;
 
+    WATCHDOG_RESET();
 	/* Try to find previous block */
 	for (p = ind->p - 1; p >= start; p--) {
 		if (*p)
@@ -513,6 +517,7 @@ static ext3_fsblk_t ext3_find_goal(struct inode *inode, long block,
 
 	block_i =  EXT3_I(inode)->i_block_alloc_info;
 
+    WATCHDOG_RESET();
 	/*
 	 * try the heuristic for sequential allocation,
 	 * failing that at least try to get decent locality.
@@ -555,6 +560,7 @@ static int ext3_blks_to_allocate(Indirect *branch, int k, unsigned long blks,
 		return count;
 	}
 
+    WATCHDOG_RESET();
 	count++;
 	while (count < blks && count <= blocks_to_boundary &&
 		le32_to_cpu(*(branch[0].p + count)) == 0) {
@@ -597,6 +603,7 @@ static int ext3_alloc_blocks(handle_t *handle, struct inode *inode,
 	 */
 	target = blks + indirect_blks;
 
+    WATCHDOG_RESET();
 	while (1) {
 		count = target;
 		/* allocating blocks for indirect blocks and direct blocks */
@@ -672,6 +679,7 @@ static int ext3_alloc_branch(handle_t *handle, struct inode *inode,
 	if (err)
 		return err;
 
+    WATCHDOG_RESET();
 	branch[0].key = cpu_to_le32(new_blocks[0]);
 	/*
 	 * metadata blocks and data blocks are allocated.
@@ -884,6 +892,7 @@ int ext3_get_blocks_handle(handle_t *handle, struct inode *inode,
 		first_block = le32_to_cpu(chain[depth - 1].key);
 		clear_buffer_new(bh_result);
 		count++;
+        WATCHDOG_RESET();
 		/*map more blocks*/
 		while (count < maxblocks && count <= blocks_to_boundary) {
 			ext3_fsblk_t blk;
@@ -1023,6 +1032,7 @@ static int ext3_get_block(struct inode *inode, sector_t iblock,
 	int ret = 0, started = 0;
 	unsigned max_blocks = bh_result->b_size >> inode->i_blkbits;
 
+    WATCHDOG_RESET();
 	if (create && !handle) {	/* Direct IO write... */
 		if (max_blocks > DIO_MAX_BLOCKS)
 			max_blocks = DIO_MAX_BLOCKS;
@@ -1157,6 +1167,7 @@ static int walk_page_buffers(	handle_t *handle,
 	int err, ret = 0;
 	struct buffer_head *next;
 
+    WATCHDOG_RESET();
 	for (	bh = head, block_start = 0;
 		ret == 0 && (bh != head || !block_start);
 		block_start = block_end, bh = next)
@@ -1442,6 +1453,7 @@ static int ext3_journalled_write_end(struct file *file,
 	int partial = 0;
 	unsigned from, to;
 
+    WATCHDOG_RESET();
 	trace_ext3_journalled_write_end(inode, pos, len, copied);
 	from = pos & (PAGE_CACHE_SIZE - 1);
 	to = from + len;
@@ -1619,6 +1631,7 @@ static int ext3_ordered_writepage(struct page *page,
 	J_ASSERT(PageLocked(page));
 	WARN_ON_ONCE(IS_RDONLY(inode));
 
+    WATCHDOG_RESET();
 	/*
 	 * We give up here if we're reentered, because it might be for a
 	 * different filesystem.
@@ -1697,6 +1710,7 @@ static int ext3_writeback_writepage(struct page *page,
 	if (ext3_journal_current_handle())
 		goto out_fail;
 
+    WATCHDOG_RESET();
 	trace_ext3_writeback_writepage(page);
 	if (page_has_buffers(page)) {
 		if (!walk_page_buffers(NULL, page_buffers(page), 0,
@@ -1737,6 +1751,7 @@ static int ext3_journalled_writepage(struct page *page,
 	J_ASSERT(PageLocked(page));
 	WARN_ON_ONCE(IS_RDONLY(inode));
 
+    WATCHDOG_RESET();
 	if (ext3_journal_current_handle())
 		goto no_write;
 
@@ -1852,6 +1867,7 @@ static ssize_t ext3_direct_IO(int rw, struct kiocb *iocb,
 	size_t count = iov_length(iov, nr_segs);
 	int retries = 0;
 
+    WATCHDOG_RESET();
 	trace_ext3_direct_IO_enter(inode, offset, iov_length(iov, nr_segs), rw);
 
 	if (rw == WRITE) {
@@ -2021,6 +2037,7 @@ static int ext3_block_truncate_page(struct inode *inode, loff_t from)
 	struct buffer_head *bh;
 	int err = 0;
 
+    WATCHDOG_RESET();
 	/* Truncated on block boundary - nothing to do */
 	blocksize = inode->i_sb->s_blocksize;
 	if ((from & (blocksize - 1)) == 0)
@@ -2167,6 +2184,7 @@ static Indirect *ext3_find_shared(struct inode *inode, int depth,
 	Indirect *partial, *p;
 	int k, err;
 
+    WATCHDOG_RESET();
 	*top = 0;
 	/* Make k index the deepest non-null offset + 1 */
 	for (k = depth; k > 1 && !offsets[k-1]; k--)
@@ -2237,6 +2255,7 @@ static void ext3_clear_blocks(handle_t *handle, struct inode *inode,
 		}
 	}
 
+    WATCHDOG_RESET();
 	/*
 	 * Any buffers which are on the journal will be in memory. We find
 	 * them on the hash table so journal_revoke() will run journal_forget()
@@ -2301,6 +2320,7 @@ static void ext3_free_data(handle_t *handle, struct inode *inode,
 			return;
 	}
 
+    WATCHDOG_RESET();
 	for (p = first; p < last; p++) {
 		nr = le32_to_cpu(*p);
 		if (nr) {
@@ -2369,6 +2389,7 @@ static void ext3_free_branches(handle_t *handle, struct inode *inode,
 	if (is_handle_aborted(handle))
 		return;
 
+    WATCHDOG_RESET();
 	if (depth--) {
 		struct buffer_head *bh;
 		int addr_per_block = EXT3_ADDR_PER_BLOCK(inode->i_sb);
@@ -2527,6 +2548,7 @@ void ext3_truncate(struct inode *inode)
 
 	trace_ext3_truncate_enter(inode);
 
+    WATCHDOG_RESET();
 	if (!ext3_can_truncate(inode))
 		goto out_notrans;
 
@@ -2682,6 +2704,7 @@ static ext3_fsblk_t ext3_get_inode_block(struct super_block *sb,
 		return 0;
 	}
 
+    WATCHDOG_RESET();
 	block_group = (ino - 1) / EXT3_INODES_PER_GROUP(sb);
 	gdp = ext3_get_group_desc(sb, block_group, NULL);
 	if (!gdp)
@@ -2715,6 +2738,7 @@ static int __ext3_get_inode_loc(struct inode *inode,
 	if (!block)
 		return -EIO;
 
+    WATCHDOG_RESET();
 	bh = sb_getblk(inode->i_sb, block);
 	if (!bh) {
 		ext3_error (inode->i_sb, "ext3_get_inode_loc",
@@ -2878,6 +2902,7 @@ struct inode *ext3_iget(struct super_block *sb, unsigned long ino)
 	long ret;
 	int block;
 
+    WATCHDOG_RESET();
 	inode = iget_locked(sb, ino);
 	if (!inode)
 		return ERR_PTR(-ENOMEM);
@@ -3246,6 +3271,7 @@ int ext3_setattr(struct dentry *dentry, struct iattr *attr)
 	if (error)
 		return error;
 
+    WATCHDOG_RESET();
 	if (is_quota_modification(inode, attr))
 		dquot_initialize(inode);
 	if ((ia_valid & ATTR_UID && attr->ia_uid != inode->i_uid) ||
@@ -3531,6 +3557,7 @@ int ext3_change_inode_journal_flag(struct inode *inode, int val)
 	handle_t *handle;
 	int err;
 
+    WATCHDOG_RESET();
 	/*
 	 * We have to be very careful here: changing a data block's
 	 * journaling status dynamically is dangerous.  If we write a

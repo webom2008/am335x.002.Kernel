@@ -27,6 +27,7 @@
 #include <linux/buffer_head.h>
 #include <linux/slab.h>
 #include <linux/rbtree.h>
+#include <linux/watchdog.h>
 
 static unsigned char ext3_filetype_table[] = {
 	DT_UNKNOWN, DT_REG, DT_DIR, DT_CHR, DT_BLK, DT_FIFO, DT_SOCK, DT_LNK
@@ -125,6 +126,7 @@ static int ext3_readdir(struct file * filp,
 	stored = 0;
 	offset = filp->f_pos & (sb->s_blocksize - 1);
 
+    WATCHDOG_RESET();
 	while (!error && !stored && filp->f_pos < inode->i_size) {
 		unsigned long blk = filp->f_pos >> EXT3_BLOCK_SIZE_BITS(sb);
 		struct buffer_head map_bh;
@@ -274,6 +276,7 @@ static void free_rb_tree_fname(struct rb_root *root)
 	struct rb_node	*parent;
 	struct fname	*fname;
 
+    WATCHDOG_RESET();
 	while (n) {
 		/* Do the node's children first */
 		if (n->rb_left) {
@@ -354,6 +357,7 @@ int ext3_htree_store_dirent(struct file *dir_file, __u32 hash,
 	memcpy(new_fn->name, dirent->name, dirent->name_len);
 	new_fn->name[dirent->name_len] = 0;
 
+    WATCHDOG_RESET();
 	while (*p) {
 		parent = *p;
 		fname = rb_entry(parent, struct fname, rb_hash);
@@ -407,6 +411,7 @@ static int call_filldir(struct file * filp, void * dirent,
 		return 0;
 	}
 	curr_pos = hash2pos(fname->hash, fname->minor_hash);
+    WATCHDOG_RESET();
 	while (fname) {
 		error = filldir(dirent, fname->name,
 				fname->name_len, curr_pos,
@@ -461,6 +466,7 @@ static int ext3_dx_readdir(struct file * filp,
 	} else if (!info->curr_node)
 		info->curr_node = rb_first(&info->root);
 
+    WATCHDOG_RESET();
 	while (1) {
 		/*
 		 * Fill the rbtree if we have no more entries,

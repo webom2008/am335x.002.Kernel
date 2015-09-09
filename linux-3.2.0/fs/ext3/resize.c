@@ -15,6 +15,7 @@
 
 #include <linux/errno.h>
 #include <linux/slab.h>
+#include <linux/watchdog.h>
 
 
 #define outside(b, first, last)	((b) < (first) || (b) >= (last))
@@ -206,6 +207,7 @@ static int setup_new_group_blocks(struct super_block *sb,
 	/* This transaction may be extended/restarted along the way */
 	handle = ext3_journal_start_sb(sb, EXT3_MAX_TRANS_DATA);
 
+    WATCHDOG_RESET();
 	if (IS_ERR(handle))
 		return PTR_ERR(handle);
 
@@ -398,6 +400,7 @@ static int verify_reserved_gdb(struct super_block *sb,
 	__le32 *p = (__le32 *)primary->b_data;
 	int gdbackups = 0;
 
+    WATCHDOG_RESET();
 	while ((grp = ext3_list_backups(sb, &three, &five, &seven)) < end) {
 		if (le32_to_cpu(*p++) != grp * EXT3_BLOCKS_PER_GROUP(sb) + blk){
 			ext3_warning(sb, __func__,
@@ -609,6 +612,7 @@ static int reserve_backup_gdb(handle_t *handle, struct inode *inode,
 					 EXT3_ADDR_PER_BLOCK(sb));
 	end = (__le32 *)dind->b_data + EXT3_ADDR_PER_BLOCK(sb);
 
+    WATCHDOG_RESET();
 	/* Get each reserved primary GDT block and verify it holds backups */
 	for (res = 0; res < reserved_gdb; res++, blk++) {
 		if (le32_to_cpu(*data) != blk) {
@@ -796,6 +800,7 @@ int ext3_group_add(struct super_block *sb, struct ext3_new_group_data *input)
 	int gdb_off, gdb_num;
 	int err, err2;
 
+    WATCHDOG_RESET();
 	gdb_num = input->group / EXT3_DESC_PER_BLOCK(sb);
 	gdb_off = input->group % EXT3_DESC_PER_BLOCK(sb);
 
@@ -1002,6 +1007,7 @@ int ext3_group_extend(struct super_block *sb, struct ext3_super_block *es,
 	int err;
 	unsigned long freed_blocks;
 
+    WATCHDOG_RESET();
 	/* We don't need to worry about locking wrt other resizers just
 	 * yet: we're going to revalidate es->s_blocks_count after
 	 * taking the s_resize_lock below. */

@@ -24,6 +24,7 @@
 #include <linux/vfs.h>
 #include <linux/mutex.h>
 #include <linux/mtd/mtd.h> //<!--Add by -QWB-20150906-  For fixed cramfs nand flash err block -->
+#include <linux/watchdog.h>
 #include <asm/uaccess.h>
 
 static const struct super_operations cramfs_ops;
@@ -158,12 +159,13 @@ static void cramfs_fill_nand(struct super_block *sb)
             return;
 
         blocks = mtd->size>>mtd->erasesize_shift;
-        printk("-QWB-:cramfs_fill_nand blocks is %d-----------------------\n\n\n\n", blocks);
+        printk("-QWB-:cramfs_fill_nand blocks is %d", blocks);
         block_map = kmalloc(blocks*sizeof(uint32_t), GFP_KERNEL);
         if (!block_map)
             return ;
         
         for(i = 0; i < blocks; i++){
+            WATCHDOG_RESET();
             while(mtd->block_isbad(mtd, ((loff_t)i*mtd->erasesize + offset)))
 //            if (mtd->block_isbad(mtd, (loff_t)i*mtd->erasesize))
                  offset += mtd->erasesize;
@@ -235,6 +237,7 @@ static void *cramfs_read(struct super_block *sb, unsigned int offset, unsigned i
 
 	/* Check if an existing buffer already has the data.. */
 	for (i = 0; i < READ_BUFFERS; i++) {
+        WATCHDOG_RESET();
 		unsigned int blk_offset;
 
 		if (buffer_dev[i] != sb)
@@ -263,7 +266,7 @@ static void *cramfs_read(struct super_block *sb, unsigned int offset, unsigned i
 		}
 		pages[i] = page;
 	}
-
+    WATCHDOG_RESET();
 	for (i = 0; i < BLKS_PER_BUF; i++) {
 		struct page *page = pages[i];
 		if (page) {
@@ -280,7 +283,8 @@ static void *cramfs_read(struct super_block *sb, unsigned int offset, unsigned i
 	next_buffer = NEXT_BUFFER(buffer);
 	buffer_blocknr[buffer] = blocknr;
 	buffer_dev[buffer] = sb;
-
+    
+    WATCHDOG_RESET();
 	data = read_buffers[buffer];
 	for (i = 0; i < BLKS_PER_BUF; i++) {
 		struct page *page = pages[i];
@@ -336,6 +340,7 @@ static int cramfs_fill_super(struct super_block *sb, void *data, int silent)
 		return -ENOMEM;
 	sb->s_fs_info = sbi;
     
+    WATCHDOG_RESET();
     cramfs_fill_nand(sb); //<!--Add by -QWB-20150906-: For fixed cramfs nand flash err block -->
 
 	/* Invalidate the read buffers on mount: think disk change.. */
@@ -346,7 +351,7 @@ static int cramfs_fill_super(struct super_block *sb, void *data, int silent)
 	/* Read the first block and get the superblock from it */
 	memcpy(&super, cramfs_read(sb, 0, sizeof(super)), sizeof(super));
 	mutex_unlock(&read_mutex);
-
+    WATCHDOG_RESET();
 	/* Do sanity checks on the superblock */
 	if (super.magic != CRAMFS_MAGIC) {
 		/* check for wrong endianess */
@@ -360,6 +365,7 @@ static int cramfs_fill_super(struct super_block *sb, void *data, int silent)
 		mutex_lock(&read_mutex);
 		memcpy(&super, cramfs_read(sb, 512, sizeof(super)), sizeof(super));
 		mutex_unlock(&read_mutex);
+        WATCHDOG_RESET();
 		if (super.magic != CRAMFS_MAGIC) {
 			if (super.magic == CRAMFS_MAGIC_WEND && !silent)
 				printk(KERN_ERR "cramfs: wrong endianess\n");
@@ -407,10 +413,13 @@ static int cramfs_fill_super(struct super_block *sb, void *data, int silent)
 
 	/* Set it all up.. */
 	sb->s_op = &cramfs_ops;
+    WATCHDOG_RESET();
 	root = get_cramfs_inode(sb, &super.root, 0);
 	if (IS_ERR(root))
 		goto out;
+    WATCHDOG_RESET();
 	sb->s_root = d_alloc_root(root);
+    WATCHDOG_RESET();
 	if (!sb->s_root) {
 		iput(root);
 		goto out;
@@ -471,7 +480,8 @@ static int cramfs_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		ino_t ino;
 		mode_t mode;
 		int namelen, error;
-
+        
+        WATCHDOG_RESET();
 		mutex_lock(&read_mutex);
 		de = cramfs_read(sb, OFFSET(inode) + offset, sizeof(*de)+CRAMFS_MAXPATHLEN);
 		name = (char *)(de+1);
@@ -524,7 +534,7 @@ static struct dentry * cramfs_lookup(struct inode *dir, struct dentry *dentry, s
 		char *name;
 		int namelen, retval;
 		int dir_off = OFFSET(dir) + offset;
-
+        WATCHDOG_RESET();
 		de = cramfs_read(dir->i_sb, dir_off, sizeof(*de)+CRAMFS_MAXPATHLEN);
 		name = (char *)(de+1);
 
@@ -617,6 +627,7 @@ static int cramfs_readpage(struct file *file, struct page * page)
 	kunmap(page);
 	SetPageUptodate(page);
 	unlock_page(page);
+    WATCHDOG_RESET();
 	return 0;
 
 err:
@@ -657,6 +668,7 @@ static const struct super_operations cramfs_ops = {
 static struct dentry *cramfs_mount(struct file_system_type *fs_type,
 	int flags, const char *dev_name, void *data)
 {
+    WATCHDOG_RESET();
 	return mount_bdev(fs_type, flags, dev_name, data, cramfs_fill_super);
 }
 

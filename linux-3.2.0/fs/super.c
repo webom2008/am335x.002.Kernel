@@ -32,6 +32,7 @@
 #include <linux/backing-dev.h>
 #include <linux/rculist_bl.h>
 #include <linux/cleancache.h>
+#include <linux/watchdog.h>
 #include "internal.h"
 
 
@@ -887,6 +888,7 @@ struct dentry *mount_ns(struct file_system_type *fs_type, int flags,
 {
 	struct super_block *sb;
 
+    WATCHDOG_RESET();
 	sb = sget(fs_type, ns_test_super, ns_set_super, data);
 	if (IS_ERR(sb))
 		return ERR_CAST(sb);
@@ -896,6 +898,7 @@ struct dentry *mount_ns(struct file_system_type *fs_type, int flags,
 		sb->s_flags = flags;
 		err = fill_super(sb, data, flags & MS_SILENT ? 1 : 0);
 		if (err) {
+            WATCHDOG_RESET();
 			deactivate_locked_super(sb);
 			return ERR_PTR(err);
 		}
@@ -938,7 +941,8 @@ struct dentry *mount_bdev(struct file_system_type *fs_type,
 
 	if (!(flags & MS_RDONLY))
 		mode |= FMODE_WRITE;
-
+    
+    WATCHDOG_RESET();
 	bdev = blkdev_get_by_path(dev_name, mode, fs_type);
 	if (IS_ERR(bdev))
 		return ERR_CAST(bdev);
@@ -954,6 +958,7 @@ struct dentry *mount_bdev(struct file_system_type *fs_type,
 		error = -EBUSY;
 		goto error_bdev;
 	}
+    WATCHDOG_RESET();
 	s = sget(fs_type, test_bdev_super, set_bdev_super, bdev);
 	mutex_unlock(&bdev->bd_fsfreeze_mutex);
 	if (IS_ERR(s))
@@ -961,6 +966,7 @@ struct dentry *mount_bdev(struct file_system_type *fs_type,
 
 	if (s->s_root) {
 		if ((flags ^ s->s_flags) & MS_RDONLY) {
+            WATCHDOG_RESET();
 			deactivate_locked_super(s);
 			error = -EBUSY;
 			goto error_bdev;
@@ -983,9 +989,11 @@ struct dentry *mount_bdev(struct file_system_type *fs_type,
 		s->s_mode = mode;
 		strlcpy(s->s_id, bdevname(bdev, b), sizeof(s->s_id));
 		sb_set_blocksize(s, block_size(bdev));
+        WATCHDOG_RESET();
 		error = fill_super(s, data, flags & MS_SILENT ? 1 : 0);
 		if (error) {
 			deactivate_locked_super(s);
+            WATCHDOG_RESET();
 			goto error;
 		}
 
@@ -1053,6 +1061,7 @@ struct dentry *mount_single(struct file_system_type *fs_type,
 	struct super_block *s;
 	int error;
 
+    WATCHDOG_RESET();
 	s = sget(fs_type, compare_single, set_anon_super, NULL);
 	if (IS_ERR(s))
 		return ERR_CAST(s);
@@ -1060,12 +1069,14 @@ struct dentry *mount_single(struct file_system_type *fs_type,
 		s->s_flags = flags;
 		error = fill_super(s, data, flags & MS_SILENT ? 1 : 0);
 		if (error) {
+            WATCHDOG_RESET();
 			deactivate_locked_super(s);
 			return ERR_PTR(error);
 		}
 		s->s_flags |= MS_ACTIVE;
 	} else {
 		do_remount_sb(s, flags, data, 0);
+        WATCHDOG_RESET();
 	}
 	return dget(s->s_root);
 }
@@ -1080,16 +1091,18 @@ mount_fs(struct file_system_type *type, int flags, const char *name, void *data)
 	int error = -ENOMEM;
 
 	if (data && !(type->fs_flags & FS_BINARY_MOUNTDATA)) {
+        WATCHDOG_RESET();
 		secdata = alloc_secdata();
 		if (!secdata)
 			goto out;
 
 		error = security_sb_copy_data(data, secdata);
+        WATCHDOG_RESET();
 		if (error)
 			goto out_free_secdata;
 	}
-
 	root = type->mount(type, flags, name, data);
+    WATCHDOG_RESET();
 	if (IS_ERR(root)) {
 		error = PTR_ERR(root);
 		goto out_free_secdata;
@@ -1101,6 +1114,7 @@ mount_fs(struct file_system_type *type, int flags, const char *name, void *data)
 	sb->s_flags |= MS_BORN;
 
 	error = security_sb_kern_mount(sb, flags, secdata);
+    WATCHDOG_RESET();
 	if (error)
 		goto out_sb;
 
@@ -1114,6 +1128,7 @@ mount_fs(struct file_system_type *type, int flags, const char *name, void *data)
 		"negative value (%lld)\n", type->name, sb->s_maxbytes);
 
 	up_write(&sb->s_umount);
+    WATCHDOG_RESET();
 	free_secdata(secdata);
 	return root;
 out_sb:

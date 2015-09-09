@@ -58,6 +58,7 @@
 #include <linux/mbcache.h>
 #include <linux/quotaops.h>
 #include <linux/rwsem.h>
+#include <linux/watchdog.h>
 #include "xattr.h"
 #include "acl.h"
 
@@ -337,6 +338,7 @@ ext3_xattr_list_entries(struct dentry *dentry, struct ext3_xattr_entry *entry,
 {
 	size_t rest = buffer_size;
 
+    WATCHDOG_RESET();
 	for (; !IS_LAST_ENTRY(entry); entry = EXT3_XATTR_NEXT(entry)) {
 		const struct xattr_handler *handler =
 			ext3_xattr_handler(entry->e_name_index);
@@ -533,6 +535,7 @@ ext3_xattr_set_entry(struct ext3_xattr_info *i, struct ext3_xattr_search *s)
 	struct ext3_xattr_entry *last;
 	size_t free, min_offs = s->end - s->base, name_len = strlen(i->name);
 
+    WATCHDOG_RESET();
 	/* Compute min_offs and last. */
 	last = s->first;
 	for (; !IS_LAST_ENTRY(last); last = EXT3_XATTR_NEXT(last)) {
@@ -1174,6 +1177,7 @@ ext3_xattr_cmp(struct ext3_xattr_header *header1,
 {
 	struct ext3_xattr_entry *entry1, *entry2;
 
+    WATCHDOG_RESET();
 	entry1 = ENTRY(header1+1);
 	entry2 = ENTRY(header2+1);
 	while (!IS_LAST_ENTRY(entry1)) {
@@ -1215,6 +1219,7 @@ ext3_xattr_cache_find(struct inode *inode, struct ext3_xattr_header *header,
 	__u32 hash = le32_to_cpu(header->h_hash);
 	struct mb_cache_entry *ce;
 
+    WATCHDOG_RESET();
 	if (!header->h_hash)
 		return NULL;  /* never share */
 	ea_idebug(inode, "looking for cached blocks [%x]", (int)hash);
@@ -1265,6 +1270,7 @@ static inline void ext3_xattr_hash_entry(struct ext3_xattr_header *header,
 	char *name = entry->e_name;
 	int n;
 
+    WATCHDOG_RESET();
 	for (n=0; n < entry->e_name_len; n++) {
 		hash = (hash << NAME_HASH_SHIFT) ^
 		       (hash >> (8*sizeof(hash) - NAME_HASH_SHIFT)) ^
@@ -1300,6 +1306,7 @@ static void ext3_xattr_rehash(struct ext3_xattr_header *header,
 	struct ext3_xattr_entry *here;
 	__u32 hash = 0;
 
+    WATCHDOG_RESET();
 	ext3_xattr_hash_entry(header, entry);
 	here = ENTRY(header+1);
 	while (!IS_LAST_ENTRY(here)) {

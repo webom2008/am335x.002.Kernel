@@ -22,6 +22,7 @@
 #include <linux/buffer_head.h>
 #include <linux/blkdev.h>
 #include <trace/events/ext3.h>
+#include <linux/watchdog.h>
 
 /*
  * balloc.c contains the blocks allocation and deallocation routines
@@ -108,6 +109,7 @@ static int ext3_valid_block_bitmap(struct super_block *sb,
 	ext3_fsblk_t bitmap_blk;
 	ext3_fsblk_t group_first_block;
 
+    WATCHDOG_RESET();
 	group_first_block = ext3_group_first_block_no(sb, block_group);
 
 	/* check whether block bitmap block number is set */
@@ -158,7 +160,8 @@ read_block_bitmap(struct super_block *sb, unsigned int block_group)
 	struct ext3_group_desc * desc;
 	struct buffer_head * bh = NULL;
 	ext3_fsblk_t bitmap_blk;
-
+    
+    WATCHDOG_RESET();
 	desc = ext3_get_group_desc(sb, block_group, NULL);
 	if (!desc)
 		return NULL;
@@ -223,7 +226,7 @@ restart:
 	n = rb_first(root);
 	bad = 0;
 	prev = NULL;
-
+    WATCHDOG_RESET();
 	printk("Block Allocation Reservation Windows Map (%s):\n", fn);
 	while (n) {
 		rsv = rb_entry(n, struct ext3_reserve_window_node, rsv_node);
@@ -311,7 +314,8 @@ search_reserve_window(struct rb_root *root, ext3_fsblk_t goal)
 
 	if (!n)
 		return NULL;
-
+    
+    WATCHDOG_RESET();
 	do {
 		rsv = rb_entry(n, struct ext3_reserve_window_node, rsv_node);
 
@@ -368,7 +372,7 @@ void ext3_rsv_window_add(struct super_block *sb,
 			BUG();
 		}
 	}
-
+    WATCHDOG_RESET();
 	rb_link_node(node, parent, p);
 	rb_insert_color(node, root);
 }
@@ -525,6 +529,7 @@ void ext3_free_blocks_sb(handle_t *handle, struct super_block *sb,
 
 	ext3_debug ("freeing block(s) %lu-%lu\n", block, block + count - 1);
 
+    WATCHDOG_RESET();
 do_more:
 	overflow = 0;
 	block_group = (block - le32_to_cpu(es->s_first_data_block)) /
@@ -582,6 +587,7 @@ do_more:
 
 	jbd_lock_bh_state(bitmap_bh);
 
+  	WATCHDOG_RESET();
 	for (i = 0, group_freed = 0; i < count; i++) {
 		/*
 		 * An HJ special.  This is expensive...
@@ -752,6 +758,7 @@ bitmap_search_next_usable_block(ext3_grpblk_t start, struct buffer_head *bh,
 	ext3_grpblk_t next;
 	struct journal_head *jh = bh2jh(bh);
 
+    WATCHDOG_RESET();
 	while (start < maxblocks) {
 		next = ext3_find_next_zero_bit(bh->b_data, maxblocks, start);
 		if (next >= maxblocks)
@@ -787,6 +794,7 @@ find_next_usable_block(ext3_grpblk_t start, struct buffer_head *bh,
 	ext3_grpblk_t here, next;
 	char *p, *r;
 
+    WATCHDOG_RESET();
 	if (start > 0) {
 		/*
 		 * The goal was occupied; search forward for a free
@@ -954,6 +962,7 @@ repeat:
 		grp_goal++;
 	}
 	*count = num;
+    WATCHDOG_RESET();
 	return grp_goal - num;
 fail_access:
 	*count = num;
@@ -1014,6 +1023,7 @@ static int find_next_reservable_window(
 	if (!rsv)
 		return -1;
 
+    WATCHDOG_RESET();
 	while (1) {
 		if (cur <= rsv->rsv_end)
 			cur = rsv->rsv_end + 1;
@@ -1365,6 +1375,7 @@ ext3_try_to_allocate_with_rsv(struct super_block *sb, handle_t *handle,
 	group_first_block = ext3_group_first_block_no(sb, group);
 	group_last_block = group_first_block + (EXT3_BLOCKS_PER_GROUP(sb) - 1);
 
+    WATCHDOG_RESET();
 	/*
 	 * Basically we will allocate a new block from inode's reservation
 	 * window.
@@ -1593,6 +1604,7 @@ retry_alloc:
 	ngroups = EXT3_SB(sb)->s_groups_count;
 	smp_rmb();
 
+    WATCHDOG_RESET();
 	/*
 	 * Now search the rest of the groups.  We assume that
 	 * group_no and gdp correctly point to the last group visited.
@@ -1798,6 +1810,7 @@ ext3_fsblk_t ext3_count_free_blocks(struct super_block *sb)
 	bitmap_count = 0;
 	gdp = NULL;
 
+    WATCHDOG_RESET();
 	smp_rmb();
 	for (i = 0; i < ngroups; i++) {
 		gdp = ext3_get_group_desc(sb, i, NULL);
@@ -1969,6 +1982,7 @@ static ext3_grpblk_t ext3_trim_all_free(struct super_block *sb,
 	free_blocks = le16_to_cpu(gdp->bg_free_blocks_count);
 	sbi = EXT3_SB(sb);
 
+    WATCHDOG_RESET();
 	 /* Walk through the whole group */
 	while (start < max) {
 		start = bitmap_search_next_usable_block(start, bitmap_bh, max);
@@ -2127,6 +2141,7 @@ int ext3_trim_fs(struct super_block *sb, struct fstrim_range *range)
 	if (first_group > last_group)
 		return -EINVAL;
 
+    WATCHDOG_RESET();
 	for (group = first_group; group <= last_group; group++) {
 		gdp = ext3_get_group_desc(sb, group, NULL);
 		if (!gdp)

@@ -37,6 +37,7 @@
 #include <linux/buffer_head.h>
 #include <linux/bio.h>
 #include <trace/events/ext3.h>
+#include <linux/watchdog.h>
 
 #include "namei.h"
 #include "xattr.h"
@@ -511,6 +512,7 @@ static int ext3_htree_next_block(struct inode *dir, __u32 hash,
 	int err, num_frames = 0;
 	__u32 bhash;
 
+    WATCHDOG_RESET();
 	p = frame;
 	/*
 	 * Find the next leaf page by incrementing the frame pointer.
@@ -665,6 +667,7 @@ int ext3_htree_fill_tree(struct file *dir_file, __u32 start_hash,
 		count++;
 	}
 
+    WATCHDOG_RESET();
 	while (1) {
 		block = dx_get_block(frame->at);
 		ret = htree_dirblock_to_tree(dir_file, dir, block, &hinfo,
@@ -899,6 +902,7 @@ static struct buffer_head *ext3_find_entry(struct inode *dir,
 	if (start >= nblocks)
 		start = 0;
 	block = start;
+    WATCHDOG_RESET();
 restart:
 	do {
 		/*
@@ -981,6 +985,7 @@ static struct buffer_head * ext3_dx_find_entry(struct inode *dir,
 	unsigned long block;
 	int retval;
 
+    WATCHDOG_RESET();
 	if (!(frame = dx_probe(entry, dir, &hinfo, frames, err)))
 		return NULL;
 	do {
@@ -1031,6 +1036,7 @@ static struct dentry *ext3_lookup(struct inode * dir, struct dentry *dentry, str
 
 	bh = ext3_find_entry(dir, &dentry->d_name, &de);
 	inode = NULL;
+    WATCHDOG_RESET();
 	if (bh) {
 		unsigned long ino = le32_to_cpu(de->inode);
 		brelse (bh);
@@ -1100,6 +1106,7 @@ dx_move_dirents(char *from, char *to, struct dx_map_entry *map, int count)
 {
 	unsigned rec_len = 0;
 
+    WATCHDOG_RESET();
 	while (count--) {
 		struct ext3_dir_entry_2 *de = (struct ext3_dir_entry_2 *) (from + map->offs);
 		rec_len = EXT3_DIR_REC_LEN(de->name_len);
@@ -1123,6 +1130,7 @@ static struct ext3_dir_entry_2 *dx_pack_dirents(char *base, unsigned blocksize)
 	struct ext3_dir_entry_2 *de = (struct ext3_dir_entry_2 *)base;
 	unsigned rec_len = 0;
 
+    WATCHDOG_RESET();
 	prev = to = de;
 	while ((char *)de < base + blocksize) {
 		next = ext3_next_entry(de);
@@ -1260,6 +1268,7 @@ static int add_dirent_to_buf(handle_t *handle, struct dentry *dentry,
 	int		nlen, rlen, err;
 	char		*top;
 
+    WATCHDOG_RESET();
 	reclen = EXT3_DIR_REC_LEN(namelen);
 	if (!de) {
 		de = (struct ext3_dir_entry_2 *)bh->b_data;
@@ -1453,6 +1462,7 @@ static int ext3_add_entry (handle_t *handle, struct dentry *dentry,
 	unsigned blocksize;
 	u32 block, blocks;
 
+    WATCHDOG_RESET();
 	sb = dir->i_sb;
 	blocksize = sb->s_blocksize;
 	if (!dentry->d_name.len)
@@ -1523,6 +1533,7 @@ static int ext3_dx_add_entry(handle_t *handle, struct dentry *dentry,
 		goto cleanup;
 	}
 
+    WATCHDOG_RESET();
 	/* Block full, should compress but for now just split */
 	dxtrace(printk("using %u of %u node entries\n",
 		       dx_get_count(entries), dx_get_limit(entries)));
@@ -1640,6 +1651,7 @@ static int ext3_delete_entry (handle_t *handle,
 	i = 0;
 	pde = NULL;
 	de = (struct ext3_dir_entry_2 *) bh->b_data;
+    WATCHDOG_RESET();
 	while (i < bh->b_size) {
 		if (!ext3_check_dir_entry("ext3_delete_entry", dir, de, bh, i))
 			return -EIO;
@@ -1741,6 +1753,7 @@ static int ext3_mknod (struct inode * dir, struct dentry *dentry,
 	if (!new_valid_dev(rdev))
 		return -EINVAL;
 
+    WATCHDOG_RESET();
 	dquot_initialize(dir);
 
 retry:
@@ -1781,6 +1794,7 @@ static int ext3_mkdir(struct inode * dir, struct dentry * dentry, int mode)
 
 	dquot_initialize(dir);
 
+    WATCHDOG_RESET();
 retry:
 	handle = ext3_journal_start(dir, EXT3_DATA_TRANS_BLOCKS(dir->i_sb) +
 					EXT3_INDEX_EXTRA_TRANS_BLOCKS + 3 +
@@ -1866,6 +1880,7 @@ static int empty_dir (struct inode * inode)
 	struct super_block * sb;
 	int err = 0;
 
+    WATCHDOG_RESET();
 	sb = inode->i_sb;
 	if (inode->i_size < EXT3_DIR_REC_LEN(1) + EXT3_DIR_REC_LEN(2) ||
 	    !(bh = ext3_bread (NULL, inode, 0, 0, &err))) {
@@ -1894,6 +1909,7 @@ static int empty_dir (struct inode * inode)
 	offset = ext3_rec_len_from_disk(de->rec_len) +
 			ext3_rec_len_from_disk(de1->rec_len);
 	de = ext3_next_entry(de1);
+    WATCHDOG_RESET();
 	while (offset < inode->i_size ) {
 		if (!bh ||
 			(void *) de >= (void *) (bh->b_data+sb->s_blocksize)) {
@@ -2081,6 +2097,7 @@ static int ext3_rmdir (struct inode * dir, struct dentry *dentry)
 	struct ext3_dir_entry_2 * de;
 	handle_t *handle;
 
+    WATCHDOG_RESET();
 	/* Initialize quotas before so that eventual writes go in
 	 * separate transaction */
 	dquot_initialize(dir);
@@ -2148,6 +2165,7 @@ static int ext3_unlink(struct inode * dir, struct dentry *dentry)
 	dquot_initialize(dir);
 	dquot_initialize(dentry->d_inode);
 
+    WATCHDOG_RESET();
 	handle = ext3_journal_start(dir, EXT3_DELETE_TRANS_BLOCKS(dir->i_sb));
 	if (IS_ERR(handle))
 		return PTR_ERR(handle);
@@ -2204,6 +2222,7 @@ static int ext3_symlink (struct inode * dir,
 	if (l > dir->i_sb->s_blocksize)
 		return -ENAMETOOLONG;
 
+    WATCHDOG_RESET();
 	dquot_initialize(dir);
 
 	if (l > EXT3_N_BLOCKS * 4) {
@@ -2307,6 +2326,7 @@ static int ext3_link (struct dentry * old_dentry,
 	if (inode->i_nlink >= EXT3_LINK_MAX)
 		return -EMLINK;
 
+    WATCHDOG_RESET();
 	dquot_initialize(dir);
 
 retry:
@@ -2352,6 +2372,7 @@ static int ext3_rename (struct inode * old_dir, struct dentry *old_dentry,
 	struct ext3_dir_entry_2 * old_de, * new_de;
 	int retval, flush_file = 0;
 
+    WATCHDOG_RESET();
 	dquot_initialize(old_dir);
 	dquot_initialize(new_dir);
 

@@ -10,6 +10,7 @@
 #include <linux/buffer_head.h>
 #include <linux/jbd.h>
 #include <linux/ext3_fs.h>
+#include <linux/watchdog.h>
 
 #ifdef EXT3FS_DEBUG
 
@@ -22,6 +23,7 @@ unsigned long ext3_count_free (struct buffer_head * map, unsigned int numchars)
 
 	if (!map)
 		return (0);
+    WATCHDOG_RESET();
 	for (i = 0; i < numchars; i++)
 		sum += nibblemap[map->b_data[i] & 0xf] +
 			nibblemap[(map->b_data[i] >> 4) & 0xf];

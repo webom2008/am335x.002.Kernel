@@ -765,7 +765,7 @@ static noinline int init_post(void)
 	numa_default_policy();
 
 
-    printk("-QWB-WDT_keepAlive");
+    printk("-QWB-WDT_keepAlive========run_init_process\n");
     WATCHDOG_RESET();
     
 	current->signal->flags |= SIGNAL_UNKILLABLE;

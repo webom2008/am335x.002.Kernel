@@ -39,6 +39,7 @@
 #include <linux/cleancache.h>
 
 #include <asm/uaccess.h>
+#include <linux/watchdog.h>
 
 #include "xattr.h"
 #include "acl.h"
@@ -445,6 +446,7 @@ static void ext3_put_super (struct super_block * sb)
 		ext3_commit_super(sb, es, 1);
 	}
 
+    WATCHDOG_RESET();
 	for (i = 0; i < sbi->s_gdb_count; i++)
 		brelse(sbi->s_group_desc[i]);
 	kfree(sbi->s_group_desc);
@@ -984,11 +986,13 @@ static int parse_options (char *options, struct super_block *sb,
 
 	if (!options)
 		return 1;
-
+    WATCHDOG_RESET();
 	while ((p = strsep (&options, ",")) != NULL) {
 		int token;
 		if (!*p)
 			continue;
+        
+        
 		/*
 		 * Initialize args struct so we know whether arg was
 		 * found; some options take optional arguments.
@@ -1321,6 +1325,7 @@ static int ext3_setup_super(struct super_block *sb, struct ext3_super_block *es,
 	struct ext3_sb_info *sbi = EXT3_SB(sb);
 	int res = 0;
 
+    WATCHDOG_RESET();
 	if (le32_to_cpu(es->s_rev_level) > EXT3_MAX_SUPP_REV) {
 		ext3_msg(sb, KERN_ERR,
 			"error: revision level too high, "
@@ -1392,6 +1397,7 @@ static int ext3_check_descriptors(struct super_block *sb)
 
 	ext3_debug ("Checking group descriptors");
 
+    WATCHDOG_RESET();
 	for (i = 0; i < sbi->s_groups_count; i++) {
 		struct ext3_group_desc *gdp = ext3_get_group_desc(sb, i, NULL);
 		ext3_fsblk_t first_block = ext3_group_first_block_no(sb, i);
@@ -1467,6 +1473,7 @@ static void ext3_orphan_cleanup (struct super_block * sb,
 #ifdef CONFIG_QUOTA
 	int i;
 #endif
+    WATCHDOG_RESET();
 	if (!es->s_last_orphan) {
 		jbd_debug(4, "no orphan inodes to clean up\n");
 		return;
@@ -1513,6 +1520,7 @@ static void ext3_orphan_cleanup (struct super_block * sb,
 	}
 #endif
 
+    WATCHDOG_RESET();
 	while (es->s_last_orphan) {
 		struct inode *inode;
 
@@ -1666,6 +1674,7 @@ static int ext3_fill_super (struct super_block *sb, void *data, int silent)
 	sbi->s_resgid = EXT3_DEF_RESGID;
 	sbi->s_sb_block = sb_block;
 
+    WATCHDOG_RESET();
 	blocksize = sb_min_blocksize(sb, EXT3_MIN_BLOCK_SIZE);
 	if (!blocksize) {
 		ext3_msg(sb, KERN_ERR, "error: unable to set blocksize");
@@ -1917,6 +1926,7 @@ static int ext3_fill_super (struct super_block *sb, void *data, int silent)
 
 	bgl_lock_init(sbi->s_blockgroup_lock);
 
+    WATCHDOG_RESET();
 	for (i = 0; i < db_count; i++) {
 		block = descriptor_loc(sb, logic_sb_block, i);
 		sbi->s_group_desc[i] = sb_bread(sb, block);
@@ -2133,6 +2143,7 @@ static journal_t *ext3_get_journal(struct super_block *sb,
 	struct inode *journal_inode;
 	journal_t *journal;
 
+    WATCHDOG_RESET();
 	/* First, test for the existence of a valid inode on disk.  Bad
 	 * things happen if we iget() an unused inode, as the subsequent
 	 * iput() will try to delete it. */
@@ -2185,6 +2196,7 @@ static journal_t *ext3_get_dev_journal(struct super_block *sb,
 	if (bdev == NULL)
 		return NULL;
 
+    WATCHDOG_RESET();
 	blocksize = sb->s_blocksize;
 	hblock = bdev_logical_block_size(bdev);
 	if (blocksize < hblock) {
@@ -2263,6 +2275,7 @@ static int ext3_load_journal(struct super_block *sb,
 	int err = 0;
 	int really_read_only;
 
+    WATCHDOG_RESET();
 	if (journal_devnum &&
 	    journal_devnum != le32_to_cpu(es->s_journal_dev)) {
 		ext3_msg(sb, KERN_INFO, "external journal device major/minor "
@@ -2351,6 +2364,7 @@ static int ext3_create_journal(struct super_block *sb,
 	journal_t *journal;
 	int err;
 
+    WATCHDOG_RESET();
 	if (sb->s_flags & MS_RDONLY) {
 		ext3_msg(sb, KERN_ERR,
 			"error: readonly filesystem when trying to "
@@ -2595,6 +2609,7 @@ static int ext3_remount (struct super_block * sb, int * flags, char * data)
 	int i;
 #endif
 
+    WATCHDOG_RESET();
 	/* Store the original options */
 	lock_super(sb);
 	old_sb_flags = sb->s_flags;
@@ -2733,6 +2748,7 @@ static int ext3_statfs (struct dentry * dentry, struct kstatfs * buf)
 	struct ext3_super_block *es = sbi->s_es;
 	u64 fsid;
 
+    WATCHDOG_RESET();
 	if (test_opt(sb, MINIX_DF)) {
 		sbi->s_overhead_last = 0;
 	} else if (sbi->s_blocks_last != le32_to_cpu(es->s_blocks_count)) {
@@ -2921,6 +2937,7 @@ static int ext3_quota_on(struct super_block *sb, int type, int format_id,
 				"Journaled quota will not work.");
 	}
 
+    WATCHDOG_RESET();
 	/*
 	 * When we journal data on quota file, we have to flush journal to see
 	 * all updates to the file when we bypass pagecache...
@@ -2956,6 +2973,7 @@ static ssize_t ext3_quota_read(struct super_block *sb, int type, char *data,
 	struct buffer_head *bh;
 	loff_t i_size = i_size_read(inode);
 
+    WATCHDOG_RESET();
 	if (off > i_size)
 		return 0;
 	if (off+len > i_size)
@@ -3001,6 +3019,7 @@ static ssize_t ext3_quota_write(struct super_block *sb, int type,
 		return -EIO;
 	}
 
+    WATCHDOG_RESET();
 	/*
 	 * Since we account only one data block in transaction credits,
 	 * then it is impossible to cross a block boundary.
@@ -3055,6 +3074,7 @@ out:
 static struct dentry *ext3_mount(struct file_system_type *fs_type,
 	int flags, const char *dev_name, void *data)
 {
+    WATCHDOG_RESET();
 	return mount_bdev(fs_type, flags, dev_name, data, ext3_fill_super);
 }
 

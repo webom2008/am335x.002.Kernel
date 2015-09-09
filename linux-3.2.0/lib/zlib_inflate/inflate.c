@@ -361,7 +361,7 @@ int zlib_inflate(z_streamp strm, int flush)
     in = have;
     out = left;
     ret = Z_OK;
-    for (;;)
+    for (;;){
         switch (state->mode) {
         case HEAD:
             if (state->wrap == 0) {
@@ -721,7 +721,7 @@ int zlib_inflate(z_streamp strm, int flush)
         default:
             return Z_STREAM_ERROR;
         }
-
+    }
     /*
        Return from inflate(), updating the total counts and the check value.
        If there was no progress during the inflate() call, return a buffer

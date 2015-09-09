@@ -11,6 +11,7 @@
 #include <linux/fs.h>
 #include <linux/ext3_jbd.h>
 #include <linux/ext3_fs.h>
+#include <linux/watchdog.h>
 #include "xattr.h"
 #include "acl.h"
 
@@ -40,6 +41,7 @@ ext3_acl_from_disk(const void *value, size_t size)
 	acl = posix_acl_alloc(count, GFP_NOFS);
 	if (!acl)
 		return ERR_PTR(-ENOMEM);
+    WATCHDOG_RESET();
 	for (n=0; n < count; n++) {
 		ext3_acl_entry *entry =
 			(ext3_acl_entry *)value;
@@ -96,6 +98,7 @@ ext3_acl_to_disk(const struct posix_acl *acl, size_t *size)
 		return ERR_PTR(-ENOMEM);
 	ext_acl->a_version = cpu_to_le32(EXT3_ACL_VERSION);
 	e = (char *)ext_acl + sizeof(ext3_acl_header);
+    WATCHDOG_RESET();
 	for (n=0; n < acl->a_count; n++) {
 		ext3_acl_entry *entry = (ext3_acl_entry *)e;
 		entry->e_tag  = cpu_to_le16(acl->a_entries[n].e_tag);
